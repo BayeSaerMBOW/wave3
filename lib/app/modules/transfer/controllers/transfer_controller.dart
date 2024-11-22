@@ -1,7 +1,9 @@
 import 'package:get/get.dart';
-import 'package:cloud_firestore/cloud_firestore.dart' show FirebaseFirestore, DocumentSnapshot;
+import 'package:cloud_firestore/cloud_firestore.dart'
+    show FirebaseFirestore, DocumentSnapshot;
 import 'package:firebase_auth/firebase_auth.dart' as auth;
 import '../../../../models/transaction_model.dart';
+import '../../home/controllers/home_controller.dart';
 
 class TransferController extends GetxController {
   final FirebaseFirestore _firestore = FirebaseFirestore.instance;
@@ -17,7 +19,9 @@ class TransferController extends GetxController {
     String? description,
   }) async {
     return performTransfer(
-      receivers: [{'phone': receiverPhoneNumber, 'name': ''}],
+      receivers: [
+        {'phone': receiverPhoneNumber, 'name': ''}
+      ],
       amount: amount,
       description: description,
     );
@@ -51,12 +55,14 @@ class TransferController extends GetxController {
       }
 
       // Read sender's balance
-      final senderBalanceDoc = await _firestore.collection('balances').doc(currentUser.uid).get();
+      final senderBalanceDoc =
+          await _firestore.collection('balances').doc(currentUser.uid).get();
       if (!senderBalanceDoc.exists) {
         errorMessage('Solde de l\'expéditeur non trouvé');
         return false;
       }
-      final currentBalance = (senderBalanceDoc.data() as Map<String, dynamic>)['solde'] as num;
+      final currentBalance =
+          (senderBalanceDoc.data() as Map<String, dynamic>)['solde'] as num;
 
       // Vérifier si le solde est suffisant pour tous les transferts
       final totalAmount = amount * receivers.length;
@@ -67,9 +73,10 @@ class TransferController extends GetxController {
 
       // Préparer toutes les informations des destinataires
       List<Map<String, dynamic>> transferDetails = [];
-      
+
       for (var receiver in receivers) {
-        final normalizedPhoneNumber = receiver['phone'].replaceAll(RegExp(r'\D'), '');
+        final normalizedPhoneNumber =
+            receiver['phone'].replaceAll(RegExp(r'\D'), '');
         final receiverQuery = await _firestore
             .collection('users')
             .where('telephone', isEqualTo: normalizedPhoneNumber)
@@ -77,39 +84,40 @@ class TransferController extends GetxController {
             .get();
 
         if (receiverQuery.docs.isEmpty) {
-          errorMessage('Destinataire non trouvé pour le numéro de téléphone: $normalizedPhoneNumber');
+          errorMessage(
+              'Destinataire non trouvé pour le numéro de téléphone: $normalizedPhoneNumber');
           return false;
         }
 
         final receiverId = receiverQuery.docs.first.id;
-        final receiverBalanceDoc = await _firestore.collection('balances').doc(receiverId).get();
-        
+        final receiverBalanceDoc =
+            await _firestore.collection('balances').doc(receiverId).get();
+
         if (!receiverBalanceDoc.exists) {
-          errorMessage('Solde du destinataire non trouvé pour l\'ID: $receiverId');
+          errorMessage(
+              'Solde du destinataire non trouvé pour l\'ID: $receiverId');
           return false;
         }
 
         transferDetails.add({
           'receiverId': receiverId,
           'balanceDoc': receiverBalanceDoc,
-          'currentBalance': (receiverBalanceDoc.data() as Map<String, dynamic>)['solde'] as num,
+          'currentBalance': (receiverBalanceDoc.data()
+              as Map<String, dynamic>)['solde'] as num,
         });
       }
 
       // Effectuer la transaction atomique
       await _firestore.runTransaction((tx) async {
         // Mettre à jour le solde de l'expéditeur
-        tx.update(senderBalanceDoc.reference, {
-          'solde': currentBalance - totalAmount
-        });
+        tx.update(senderBalanceDoc.reference,
+            {'solde': currentBalance - totalAmount});
 
         // Pour chaque destinataire
         for (var details in transferDetails) {
           // Mettre à jour le solde du destinataire
-          tx.update(
-            (details['balanceDoc'] as DocumentSnapshot).reference,
-            {'solde': details['currentBalance'] + amount}
-          );
+          tx.update((details['balanceDoc'] as DocumentSnapshot).reference,
+              {'solde': details['currentBalance'] + amount});
 
           // Créer une nouvelle transaction
           final transactionRef = _firestore.collection('transactions').doc();
@@ -132,6 +140,18 @@ class TransferController extends GetxController {
       if (receivers.length > 1) {
         selectedContacts.clear();
       }
+
+      // Notifier le HomeController pour mettre à jour le solde et les transactions récentes
+      Get.find<HomeController>()
+          .updateUserBalance(currentBalance - totalAmount);
+      Get.find<HomeController>().addTransaction({
+        'id': '',
+        'amount': amount,
+        'date': DateTime.now(),
+        'description': description ?? 'Transfert effectué',
+        'receiverId': '',
+        'status': 'completed',
+      });
 
       return true;
     } catch (e) {

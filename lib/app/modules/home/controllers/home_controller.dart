@@ -106,4 +106,15 @@ class HomeController extends GetxController {
   void toggleBalanceVisibility() {
     isBalanceVisible.value = !isBalanceVisible.value;
   }
+
+  void updateUserBalance(double newBalance) {
+    userBalance.value = newBalance;
+  }
+
+  void addTransaction(Map<String, dynamic> transaction) {
+    recentTransactions.insert(0, transaction);
+    if (recentTransactions.length > 5) {
+      recentTransactions.removeLast();
+    }
+  }
 }
