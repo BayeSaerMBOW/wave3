@@ -1,0 +1,47 @@
+{
+  "project_info": {
+    "project_number": "613608309251",
+    "project_id": "wave3-4040f",
+    "storage_bucket": "wave3-4040f.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:613608309251:android:66f834919624ade538c436",
+        "android_client_info": {
+          "package_name": "com.wave3.wave3"
+        }
+      },
+      "oauth_client": [
+        {
+          "client_id": "613608309251-d0576omvd186ompehvls92jjopifijjb.apps.googleusercontent.com",
+          "client_type": 1,
+          "android_info": {
+            "package_name": "com.wave3.wave3",
+            "certificate_hash": "70693376b64cbfbe05f4adc85d76cc595347f531"
+          }
+        },
+        {
+          "client_id": "613608309251-309ktgro3tbap5cu9abul4cp4gl83m9s.apps.googleusercontent.com",
+          "client_type": 3
+        }
+      ],
+      "api_key": [
+        {
+          "current_key": "AIzaSyAACmrqhY_lqUbrbdOcIM0T6G4LG-MvSuY"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": [
+            {
+              "client_id": "613608309251-309ktgro3tbap5cu9abul4cp4gl83m9s.apps.googleusercontent.com",
+              "client_type": 3
+            }
+          ]
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}
