@@ -5,6 +5,7 @@ import '../../../modules/login/controllers/login_controller.dart';
 import 'package:intl/intl.dart';
 import '../../../modules/transfer/views/transfer_view.dart';
 import 'package:qr_flutter/qr_flutter.dart';
+
 class HomeView extends StatelessWidget {
   final HomeController homeController = Get.put(HomeController());
   final LoginController loginController = Get.put(LoginController());
@@ -90,7 +91,8 @@ class HomeView extends StatelessWidget {
       ),
     );
   }
-Widget _buildHomeContent() {
+
+  Widget _buildHomeContent() {
     return SingleChildScrollView(
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -160,21 +162,20 @@ Widget _buildHomeContent() {
                             ),
                           )),
                     GestureDetector(
-  onTap: () => _showQRCodeDialog(Get.context!), // Use Get.context! instead
-  child: Container(
-    padding: EdgeInsets.all(8),
-    decoration: BoxDecoration(
-      color: Colors.white.withOpacity(0.2),
-      borderRadius: BorderRadius.circular(12),
-    ),
-    child: Icon(
-      Icons.qr_code,
-      color: Colors.white,
-      size: 24,
-    ),
-  ),
-),
-
+                      onTap: () => _showQRCodeDialog(Get.context!), // Use Get.context! instead
+                      child: Container(
+                        padding: EdgeInsets.all(8),
+                        decoration: BoxDecoration(
+                          color: Colors.white.withOpacity(0.2),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: Icon(
+                          Icons.qr_code,
+                          color: Colors.white,
+                          size: 24,
+                        ),
+                      ),
+                    ),
                   ],
                 ),
                 SizedBox(height: 20),
@@ -258,7 +259,7 @@ Widget _buildHomeContent() {
                   ),
                 ),
                 SizedBox(height: 16),
-                homeController.recentTransactions.isEmpty
+                Obx(() => homeController.recentTransactions.isEmpty
                     ? Center(child: Text('Aucune transaction récente'))
                     : Column(
                         children: homeController.recentTransactions
@@ -270,7 +271,7 @@ Widget _buildHomeContent() {
                                   isCredit: true, // Utilisez une valeur par défaut
                                 ))
                             .toList(),
-                      ),
+                      )),
               ],
             ),
           ),
@@ -429,6 +430,7 @@ Widget _buildHomeContent() {
       ),
     );
   }
+
   void _showQRCodeDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -450,5 +452,4 @@ Widget _buildHomeContent() {
       },
     );
   }
-
 }

@@ -4,11 +4,17 @@ import 'package:flutter_contacts/flutter_contacts.dart';
 import 'package:permission_handler/permission_handler.dart';
 import '../controllers/transfer_controller.dart';
 
-class TransferView extends StatelessWidget {
+class TransferView extends StatefulWidget {
+  @override
+  _TransferViewState createState() => _TransferViewState();
+}
+
+class _TransferViewState extends State<TransferView> {
   final TransferController transferController = Get.put(TransferController());
   final TextEditingController receiverPhoneNumberController = TextEditingController();
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
+  bool isSingleTransfer = true;
 
   @override
   Widget build(BuildContext context) {
@@ -44,9 +50,9 @@ class TransferView extends StatelessWidget {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.stretch,
               children: [
-                _buildCard(_buildSingleTransferSection()),
+                _buildToggleButtons(),
                 SizedBox(height: 24),
-                _buildCard(_buildMultipleTransferSection()),
+                _buildCard(isSingleTransfer ? _buildSingleTransferSection() : _buildMultipleTransferSection()),
                 SizedBox(height: 16),
                 Obx(() => Text(
                   transferController.errorMessage.value,
@@ -61,6 +67,27 @@ class TransferView extends StatelessWidget {
           ),
         ),
       ),
+    );
+  }
+
+  Widget _buildToggleButtons() {
+    return ToggleButtons(
+      children: <Widget>[
+        Icon(Icons.person),
+        Icon(Icons.people),
+      ],
+      onPressed: (int index) {
+        setState(() {
+          isSingleTransfer = index == 0;
+        });
+      },
+      isSelected: [isSingleTransfer, !isSingleTransfer],
+      selectedColor: Colors.white,
+      fillColor: Theme.of(context).primaryColor,
+      borderRadius: BorderRadius.circular(12),
+      borderColor: Theme.of(context).primaryColor,
+      selectedBorderColor: Theme.of(context).primaryColor,
+      borderWidth: 2,
     );
   }
 
@@ -285,7 +312,7 @@ class TransferView extends StatelessWidget {
                             ),
                           ),
                           IconButton(
-                            icon: Icon(Icons.remove_circle_outline, 
+                            icon: Icon(Icons.remove_circle_outline,
                               color: Colors.red[400],
                               size: 20,
                             ),
@@ -433,9 +460,9 @@ class TransferView extends StatelessWidget {
                 itemBuilder: (context, index) {
                   final contact = contacts[index];
                   if (contact.phones.isEmpty) return SizedBox.shrink();
-                  
+
                   final phoneNumber = contact.phones.first.number ?? '';
-                  
+
                   return ListTile(
                     title: Text(contact.displayName),
                     subtitle: Text(phoneNumber),
@@ -446,7 +473,7 @@ class TransferView extends StatelessWidget {
                         // Vérifier si le contact n'est pas déjà sélectionné
                         final isAlreadySelected = transferController.selectedContacts
                             .any((c) => c['phone'] == phoneNumber);
-                            
+
                         if (!isAlreadySelected) {
                           transferController.selectedContacts.add({
                             'name': contact.displayName,
