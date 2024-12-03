@@ -162,7 +162,75 @@ class TransferController extends GetxController {
     }
   }
 
-   Future<bool> cancelTransaction(String transactionId) async {
+  Future<bool> performScheduledTransfer({
+    required String receiverPhoneNumber,
+    required double amount,
+    String? description,
+    required DateTime scheduledTime,
+  }) async {
+    isLoading(true);
+    errorMessage('');
+
+    try {
+      final currentUser = _auth.currentUser;
+      if (currentUser == null) {
+        errorMessage('Utilisateur non connecté');
+        return false;
+      }
+
+      // Read sender's balance
+      final senderBalanceDoc =
+          await _firestore.collection('balances').doc(currentUser.uid).get();
+      if (!senderBalanceDoc.exists) {
+        errorMessage('Solde de l\'expéditeur non trouvé');
+        return false;
+      }
+      final currentBalance =
+          (senderBalanceDoc.data() as Map<String, dynamic>)['solde'] as num;
+
+      // Vérifier si le solde est suffisant pour le transfert
+      if (currentBalance < amount) {
+        errorMessage('Solde insuffisant pour effectuer le transfert');
+        return false;
+      }
+
+      // Préparer les informations du destinataire
+      final normalizedPhoneNumber =
+          receiverPhoneNumber.replaceAll(RegExp(r'\D'), '');
+      final receiverQuery = await _firestore
+          .collection('users')
+          .where('telephone', isEqualTo: normalizedPhoneNumber)
+          .limit(1)
+          .get();
+
+      if (receiverQuery.docs.isEmpty) {
+        errorMessage(
+            'Destinataire non trouvé pour le numéro de téléphone: $normalizedPhoneNumber');
+        return false;
+      }
+
+      final receiverId = receiverQuery.docs.first.id;
+
+      // Créer un document pour le transfert planifié
+      await _firestore.collection('scheduled_transfers').add({
+        'senderId': currentUser.uid,
+        'receiverId': receiverId,
+        'amount': amount,
+        'description': description,
+        'scheduledTime': scheduledTime,
+      });
+
+      return true;
+    } catch (e) {
+      print('Erreur de planification du transfert: $e');
+      errorMessage('Erreur lors de la planification du transfert: $e');
+      return false;
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  Future<bool> cancelTransaction(String transactionId) async {
     if (transactionId.isEmpty) {
       errorMessage('ID de transaction invalide');
       return false;
@@ -184,9 +252,9 @@ class TransferController extends GetxController {
       }
 
       final transactionData = transactionDoc.data()!;
-      
+
       // Vérifier que les IDs sont non vides
-      if (transactionData['senderId']?.isEmpty ?? true || 
+      if (transactionData['senderId']?.isEmpty ?? true ||
           transactionData['receiverId']?.isEmpty ?? true) {
         errorMessage('IDs expéditeur ou destinataire manquants');
         return false;
@@ -270,6 +338,22 @@ class TransferController extends GetxController {
     } catch (e) {
       print('Erreur lors de l\'annulation de la transaction: $e');
       errorMessage('Erreur lors de l\'annulation: $e');
+      return false;
+    } finally {
+      isLoading(false);
+    }
+  }
+
+  Future<bool> cancelScheduledTransfer(String transferId) async {
+    isLoading(true);
+    errorMessage('');
+
+    try {
+      await _firestore.collection('scheduled_transfers').doc(transferId).delete();
+      return true;
+    } catch (e) {
+      print('Erreur lors de l\'annulation du transfert planifié: $e');
+      errorMessage('Erreur lors de l\'annulation du transfert planifié: $e');
       return false;
     } finally {
       isLoading(false);

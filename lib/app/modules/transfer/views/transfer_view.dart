@@ -15,13 +15,14 @@ class _TransferViewState extends State<TransferView> {
   final TextEditingController amountController = TextEditingController();
   final TextEditingController descriptionController = TextEditingController();
   bool isSingleTransfer = true;
+  DateTime? scheduledTime;
 
   @override
   Widget build(BuildContext context) {
     return Scaffold(
       appBar: AppBar(
         elevation: 0,
-        backgroundColor: Theme.of(context).primaryColor,
+        backgroundColor: Colors.blue,
         title: Text(
           'Transfert d\'argent',
           style: TextStyle(
@@ -38,7 +39,7 @@ class _TransferViewState extends State<TransferView> {
             begin: Alignment.topCenter,
             end: Alignment.bottomCenter,
             colors: [
-              Theme.of(context).primaryColor,
+              Colors.blue,
               Colors.white,
             ],
             stops: [0.0, 0.3],
@@ -53,6 +54,8 @@ class _TransferViewState extends State<TransferView> {
                 _buildToggleButtons(),
                 SizedBox(height: 24),
                 _buildCard(isSingleTransfer ? _buildSingleTransferSection() : _buildMultipleTransferSection()),
+                SizedBox(height: 16),
+                _buildCard(_buildScheduledTransferSection()),
                 SizedBox(height: 16),
                 Obx(() => Text(
                   transferController.errorMessage.value,
@@ -83,10 +86,10 @@ class _TransferViewState extends State<TransferView> {
       },
       isSelected: [isSingleTransfer, !isSingleTransfer],
       selectedColor: Colors.white,
-      fillColor: Theme.of(context).primaryColor,
+      fillColor: Colors.blue,
       borderRadius: BorderRadius.circular(12),
-      borderColor: Theme.of(context).primaryColor,
-      selectedBorderColor: Theme.of(context).primaryColor,
+      borderColor: Colors.blue,
+      selectedBorderColor: Colors.blue,
       borderWidth: 2,
     );
   }
@@ -113,7 +116,7 @@ class _TransferViewState extends State<TransferView> {
             width: 4,
             height: 24,
             decoration: BoxDecoration(
-              color: Get.theme.primaryColor,
+              color: Colors.blue,
               borderRadius: BorderRadius.circular(2),
             ),
           ),
@@ -161,7 +164,7 @@ class _TransferViewState extends State<TransferView> {
           ),
           focusedBorder: OutlineInputBorder(
             borderRadius: BorderRadius.circular(12),
-            borderSide: BorderSide(color: Get.theme.primaryColor, width: 2),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
           ),
           filled: true,
           fillColor: Colors.grey[50],
@@ -183,7 +186,7 @@ class _TransferViewState extends State<TransferView> {
       child: ElevatedButton(
         onPressed: isLoading ? null : onPressed,
         style: ElevatedButton.styleFrom(
-          backgroundColor: isPrimary ? Get.theme.primaryColor : Colors.grey[200],
+          backgroundColor: isPrimary ? Colors.blue : Colors.grey[200],
           foregroundColor: isPrimary ? Colors.white : Colors.black87,
           elevation: isPrimary ? 4 : 2,
           shape: RoundedRectangleBorder(
@@ -196,7 +199,7 @@ class _TransferViewState extends State<TransferView> {
                 width: 24,
                 child: CircularProgressIndicator(
                   valueColor: AlwaysStoppedAnimation<Color>(
-                    isPrimary ? Colors.white : Get.theme.primaryColor,
+                    isPrimary ? Colors.white : Colors.blue,
                   ),
                 ),
               )
@@ -221,7 +224,7 @@ class _TransferViewState extends State<TransferView> {
           label: 'Numéro de téléphone du destinataire',
           keyboardType: TextInputType.phone,
           suffix: IconButton(
-            icon: Icon(Icons.contacts, color: Get.theme.primaryColor),
+            icon: Icon(Icons.contacts, color: Colors.blue),
             onPressed: () => _pickContact(Get.context!),
           ),
         ),
@@ -303,7 +306,7 @@ class _TransferViewState extends State<TransferView> {
                       ),
                       child: Row(
                         children: [
-                          Icon(Icons.person, size: 20, color: Get.theme.primaryColor),
+                          Icon(Icons.person, size: 20, color: Colors.blue),
                           SizedBox(width: 8),
                           Expanded(
                             child: Text(
@@ -347,6 +350,81 @@ class _TransferViewState extends State<TransferView> {
           isLoading: transferController.isLoading.value,
         )),
       ],
+    );
+  }
+
+  Widget _buildScheduledTransferSection() {
+    return Column(
+      crossAxisAlignment: CrossAxisAlignment.stretch,
+      children: [
+        _buildSectionTitle('Transfert Planifié'),
+        _buildTextField(
+          controller: receiverPhoneNumberController,
+          label: 'Numéro de téléphone du destinataire',
+          keyboardType: TextInputType.phone,
+          suffix: IconButton(
+            icon: Icon(Icons.contacts, color: Colors.blue),
+            onPressed: () => _pickContact(Get.context!),
+          ),
+        ),
+        _buildTextField(
+          controller: amountController,
+          label: 'Montant',
+          suffixText: 'FCFA',
+          keyboardType: TextInputType.number,
+        ),
+        _buildTextField(
+          controller: descriptionController,
+          label: 'Description (optionnel)',
+          maxLines: 2,
+        ),
+        _buildDateTimePicker(),
+        SizedBox(height: 8),
+        Obx(() => _buildButton(
+          text: 'Planifier le transfert',
+          onPressed: _performScheduledTransfer,
+          isLoading: transferController.isLoading.value,
+        )),
+      ],
+    );
+  }
+
+  Widget _buildDateTimePicker() {
+    return Container(
+      margin: EdgeInsets.only(bottom: 16),
+      child: TextField(
+        readOnly: true,
+        controller: TextEditingController(
+          text: scheduledTime == null
+              ? ''
+              : '${scheduledTime!.year}-${scheduledTime!.month}-${scheduledTime!.day} ${scheduledTime!.hour}:${scheduledTime!.minute}',
+        ),
+        decoration: InputDecoration(
+          labelText: 'Date et heure de planification',
+          labelStyle: TextStyle(
+            color: Colors.grey[600],
+            fontWeight: FontWeight.w500,
+          ),
+          suffixIcon: IconButton(
+            icon: Icon(Icons.calendar_today, color: Colors.blue),
+            onPressed: _pickDateTime,
+          ),
+          border: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          enabledBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.grey[300]!),
+          ),
+          focusedBorder: OutlineInputBorder(
+            borderRadius: BorderRadius.circular(12),
+            borderSide: BorderSide(color: Colors.blue, width: 2),
+          ),
+          filled: true,
+          fillColor: Colors.grey[50],
+        ),
+      ),
     );
   }
 
@@ -412,11 +490,42 @@ class _TransferViewState extends State<TransferView> {
     });
   }
 
+  void _performScheduledTransfer() {
+    final receiverPhoneNumber = receiverPhoneNumberController.text.trim();
+    final amount = double.tryParse(amountController.text) ?? 0.0;
+    final description = descriptionController.text.trim();
+
+    if (receiverPhoneNumber.isEmpty || amount <= 0 || scheduledTime == null) {
+      transferController.errorMessage('Veuillez remplir tous les champs correctement');
+      return;
+    }
+
+    transferController.performScheduledTransfer(
+      receiverPhoneNumber: receiverPhoneNumber,
+      amount: amount,
+      description: description,
+      scheduledTime: scheduledTime!,
+    ).then((success) {
+      if (success) {
+        Get.snackbar(
+          'Succès',
+          'Transfert planifié avec succès',
+          backgroundColor: Colors.green,
+          colorText: Colors.white,
+          duration: Duration(seconds: 3),
+        );
+        // Réinitialiser les champs après un transfert réussi
+        _resetFields();
+      }
+    });
+  }
+
   void _resetFields() {
     receiverPhoneNumberController.clear();
     amountController.clear();
     descriptionController.clear();
     transferController.selectedContacts.clear();
+    scheduledTime = null;
   }
 
   Future<void> _pickContact(BuildContext context) async {
@@ -491,5 +600,33 @@ class _TransferViewState extends State<TransferView> {
         );
       },
     );
+  }
+
+  Future<void> _pickDateTime() async {
+    final DateTime? picked = await showDatePicker(
+      context: context,
+      initialDate: DateTime.now(),
+      firstDate: DateTime.now(),
+      lastDate: DateTime(2101),
+    );
+
+    if (picked != null) {
+      final TimeOfDay? timePicked = await showTimePicker(
+        context: context,
+        initialTime: TimeOfDay.now(),
+      );
+
+      if (timePicked != null) {
+        setState(() {
+          scheduledTime = DateTime(
+            picked.year,
+            picked.month,
+            picked.day,
+            timePicked.hour,
+            timePicked.minute,
+          );
+        });
+      }
+    }
   }
 }

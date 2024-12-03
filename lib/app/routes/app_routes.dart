@@ -13,6 +13,7 @@ abstract class Routes {
   static const TRANSACTION = _Paths.TRANSACTION;
   static const SCAN = _Paths.SCAN;
   static const BALANCE = _Paths.BALANCE;
+  static const PHONE_CREDIT = _Paths.PHONE_CREDIT;
 }
 
 abstract class _Paths {
@@ -26,4 +27,5 @@ abstract class _Paths {
   static const TRANSACTION = '/transaction';
   static const SCAN = '/scan';
   static const BALANCE = '/balance';
+  static const PHONE_CREDIT = '/phone-credit';
 }

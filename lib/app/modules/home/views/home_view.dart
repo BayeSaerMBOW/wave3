@@ -7,6 +7,7 @@ import '../../../modules/transfer/views/transfer_view.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../modules/transfer/controllers/transfer_controller.dart';
 import '../../../../models/transaction_model.dart'; // Ajoutez cette ligne pour importer le modèle Transaction
+import '../../phone_credit/views/phone_credit_view.dart';
 
 class HomeView extends StatelessWidget {
   final HomeController homeController = Get.put(HomeController());
@@ -43,15 +44,15 @@ class HomeView extends StatelessWidget {
                   ),
                 ),
                 Obx(() => Text(
-                  homeController.userName.value.isEmpty
-                      ? 'Utilisateur'
-                      : homeController.userName.value,
-                  style: TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.black,
-                  ),
-                )),
+                      homeController.userName.value.isEmpty
+                          ? 'Utilisateur'
+                          : homeController.userName.value,
+                      style: TextStyle(
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.black,
+                      ),
+                    )),
               ],
             ),
           ],
@@ -134,11 +135,11 @@ class HomeView extends StatelessWidget {
                     ),
                     IconButton(
                       icon: Obx(() => Icon(
-                        homeController.isBalanceVisible.value
-                            ? Icons.visibility_off
-                            : Icons.visibility,
-                        color: Colors.white,
-                      )),
+                            homeController.isBalanceVisible.value
+                                ? Icons.visibility_off
+                                : Icons.visibility,
+                            color: Colors.white,
+                          )),
                       onPressed: () => homeController.toggleBalanceVisibility(),
                     ),
                   ],
@@ -149,7 +150,8 @@ class HomeView extends StatelessWidget {
                   children: [
                     Obx(() => homeController.isBalanceVisible.value
                         ? Text(
-                            currencyFormat.format(homeController.userBalance.value),
+                            currencyFormat
+                                .format(homeController.userBalance.value),
                             style: TextStyle(
                               color: Colors.white,
                               fontSize: 32,
@@ -268,7 +270,8 @@ class HomeView extends StatelessWidget {
                                   icon: Icons.arrow_downward,
                                   title: transactionData['description'],
                                   date: transactionData['date'],
-                                  amount: currencyFormat.format(transactionData['amount']),
+                                  amount: currencyFormat
+                                      .format(transactionData['amount']),
                                   isCredit: true,
                                   transactionId: transactionData['id'],
                                   status: transactionData['status'],
@@ -322,9 +325,95 @@ class HomeView extends StatelessWidget {
     required String label,
     required Color color,
   }) {
+    return GestureDetector(
+      onTap: () {
+        if (label.contains('Crédit\nTéléphone')) {
+          Get.to(() => PhoneCreditView());
+        }
+      },
+      child: Container(
+        width: 80,
+        margin: EdgeInsets.only(right: 12),
+        decoration: BoxDecoration(
+          color: Colors.white,
+          borderRadius: BorderRadius.circular(12),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.grey.withOpacity(0.1),
+              blurRadius: 4,
+              offset: Offset(0, 2),
+            ),
+          ],
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Container(
+              padding: EdgeInsets.all(8),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.1),
+                shape: BoxShape.circle,
+              ),
+              child: Icon(
+                icon,
+                color: color,
+                size: 24,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              label,
+              textAlign: TextAlign.center,
+              style: TextStyle(
+                fontSize: 12,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildTransactionItem({
+    required IconData icon,
+    required String title,
+    required dynamic
+        date, // Changed to dynamic to accept both String and DateTime
+    required String amount,
+    required bool isCredit,
+    required String transactionId,
+    required String status,
+  }) {
+    DateTime parsedDate;
+    if (date is DateTime) {
+      parsedDate = date;
+    } else if (date is String) {
+      try {
+        parsedDate = DateTime.parse(date);
+      } catch (e) {
+        print('Error parsing date string: $e');
+        parsedDate = DateTime.now();
+      }
+    } else {
+      print('Unsupported date format');
+      parsedDate = DateTime.now();
+    }
+
+    // Create transaction object
+    final transaction = Transaction(
+      id: transactionId,
+      senderId: '', // Add appropriate default or passed value
+      receiverId: '', // Add appropriate default or passed value
+      amount: double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0,
+      date: parsedDate,
+      status: status,
+      description: title,
+    );
+
     return Container(
-      width: 80,
-      margin: EdgeInsets.only(right: 12),
+      margin: EdgeInsets.only(bottom: 12),
+      padding: EdgeInsets.all(12),
       decoration: BoxDecoration(
         color: Colors.white,
         borderRadius: BorderRadius.circular(12),
@@ -336,134 +425,59 @@ class HomeView extends StatelessWidget {
           ),
         ],
       ),
-      child: Column(
-        mainAxisAlignment: MainAxisAlignment.center,
+      child: Row(
         children: [
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: color.withOpacity(0.1),
+              color: isCredit
+                  ? Colors.green.withOpacity(0.1)
+                  : Colors.red.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              color: color,
-              size: 24,
+              color: isCredit ? Colors.green : Colors.red,
             ),
           ),
-          SizedBox(height: 8),
+          SizedBox(width: 12),
+          Expanded(
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  title,
+                  style: TextStyle(
+                    fontWeight: FontWeight.w600,
+                  ),
+                ),
+                Text(
+                  DateFormat('dd/MM/yyyy HH:mm').format(parsedDate),
+                  style: TextStyle(
+                    color: Colors.grey,
+                    fontSize: 12,
+                  ),
+                ),
+              ],
+            ),
+          ),
           Text(
-            label,
-            textAlign: TextAlign.center,
+            amount,
             style: TextStyle(
-              fontSize: 12,
-              fontWeight: FontWeight.w500,
+              color: isCredit ? Colors.green : Colors.red,
+              fontWeight: FontWeight.w600,
             ),
           ),
+          if (status == 'completed' && transaction.isCancelable)
+            IconButton(
+              icon: Icon(Icons.cancel),
+              onPressed: () => _cancelTransaction(transactionId),
+            ),
         ],
       ),
     );
   }
 
- Widget _buildTransactionItem({
-  required IconData icon,
-  required String title,
-  required dynamic date,  // Changed to dynamic to accept both String and DateTime
-  required String amount,
-  required bool isCredit,
-  required String transactionId,
-  required String status,
-}) {
-  DateTime parsedDate;
-  if (date is DateTime) {
-    parsedDate = date;
-  } else if (date is String) {
-    try {
-      parsedDate = DateTime.parse(date);
-    } catch (e) {
-      print('Error parsing date string: $e');
-      parsedDate = DateTime.now();
-    }
-  } else {
-    print('Unsupported date format');
-    parsedDate = DateTime.now();
-  }
-
-  // Create transaction object
-  final transaction = Transaction(
-    id: transactionId,
-    senderId: '',  // Add appropriate default or passed value
-    receiverId: '', // Add appropriate default or passed value
-    amount: double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0,
-    date: parsedDate,
-    status: status,
-    description: title,
-  );
-
-  return Container(
-    margin: EdgeInsets.only(bottom: 12),
-    padding: EdgeInsets.all(12),
-    decoration: BoxDecoration(
-      color: Colors.white,
-      borderRadius: BorderRadius.circular(12),
-      boxShadow: [
-        BoxShadow(
-          color: Colors.grey.withOpacity(0.1),
-          blurRadius: 4,
-          offset: Offset(0, 2),
-        ),
-      ],
-    ),
-    child: Row(
-      children: [
-        Container(
-          padding: EdgeInsets.all(8),
-          decoration: BoxDecoration(
-            color: isCredit ? Colors.green.withOpacity(0.1) : Colors.red.withOpacity(0.1),
-            shape: BoxShape.circle,
-          ),
-          child: Icon(
-            icon,
-            color: isCredit ? Colors.green : Colors.red,
-          ),
-        ),
-        SizedBox(width: 12),
-        Expanded(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.start,
-            children: [
-              Text(
-                title,
-                style: TextStyle(
-                  fontWeight: FontWeight.w600,
-                ),
-              ),
-              Text(
-                DateFormat('dd/MM/yyyy HH:mm').format(parsedDate),
-                style: TextStyle(
-                  color: Colors.grey,
-                  fontSize: 12,
-                ),
-              ),
-            ],
-          ),
-        ),
-        Text(
-          amount,
-          style: TextStyle(
-            color: isCredit ? Colors.green : Colors.red,
-            fontWeight: FontWeight.w600,
-          ),
-        ),
-        if (status == 'completed' && transaction.isCancelable)
-          IconButton(
-            icon: Icon(Icons.cancel),
-            onPressed: () => _cancelTransaction(transactionId),
-          ),
-      ],
-    ),
-  );
-}
   void _showQRCodeDialog(BuildContext context) {
     showDialog(
       context: context,
@@ -486,14 +500,14 @@ class HomeView extends StatelessWidget {
     );
   }
 
- void _cancelTransaction(String transactionId) async {
-  if (transactionId.isEmpty) {
-    print('ID de transaction manquant');
-    return;
+  void _cancelTransaction(String transactionId) async {
+    if (transactionId.isEmpty) {
+      print('ID de transaction manquant');
+      return;
+    }
+    final result = await transferController.cancelTransaction(transactionId);
+    if (result) {
+      homeController.fetchRecentTransactions();
+    }
   }
-  final result = await transferController.cancelTransaction(transactionId);
-  if (result) {
-    homeController.fetchRecentTransactions();
-  }
-}
 }

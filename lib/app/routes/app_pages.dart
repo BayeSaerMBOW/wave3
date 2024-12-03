@@ -5,6 +5,8 @@ import '../../app/modules/login/views/login_view.dart';
 import '../../app/modules/user/views/user_view.dart';
 import '../modules/balance/bindings/balance_binding.dart';
 import '../modules/balance/views/balance_view.dart';
+import '../modules/phone_credit/bindings/phone_credit_binding.dart';
+import '../modules/phone_credit/views/phone_credit_view.dart';
 import '../modules/scan/bindings/scan_binding.dart';
 import '../modules/scan/views/scan_view.dart';
 import '../modules/transaction/bindings/transaction_binding.dart';
@@ -30,6 +32,6 @@ class AppPages {
     GetPage(
         name: DISTRIBUTOR_HOME,
         page: () => DistributorHomeView()), // Ajoutez la nouvelle route
-
+  
   ];
 }
