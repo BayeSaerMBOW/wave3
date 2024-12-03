@@ -6,8 +6,9 @@ import 'package:intl/intl.dart';
 import '../../../modules/transfer/views/transfer_view.dart';
 import 'package:qr_flutter/qr_flutter.dart';
 import '../../../modules/transfer/controllers/transfer_controller.dart';
-import '../../../../models/transaction_model.dart'; // Ajoutez cette ligne pour importer le modèle Transaction
+import '../../../../models/transaction_model.dart';
 import '../../phone_credit/views/phone_credit_view.dart';
+import '../../../utilis/transaction_utils.dart';
 
 class HomeView extends StatelessWidget {
   final HomeController homeController = Get.put(HomeController());
@@ -101,7 +102,6 @@ class HomeView extends StatelessWidget {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Carte de solde avec code QR
           Container(
             margin: EdgeInsets.all(16),
             padding: EdgeInsets.all(20),
@@ -207,7 +207,6 @@ class HomeView extends StatelessWidget {
               ],
             ),
           ),
-          // Services rapides (reste inchangé)
           Padding(
             padding: EdgeInsets.symmetric(horizontal: 16),
             child: Text(
@@ -229,26 +228,29 @@ class HomeView extends StatelessWidget {
                   icon: Icons.phone_android,
                   label: 'Crédit\nTéléphone',
                   color: Colors.purple,
+                  onTap: () => Get.to(() => PhoneCreditView()),
                 ),
                 _buildServiceCard(
                   icon: Icons.bolt,
                   label: 'Électricité',
                   color: Colors.orange,
+                  onTap: () {},
                 ),
                 _buildServiceCard(
                   icon: Icons.water_drop,
                   label: 'Eau',
                   color: Colors.blue,
+                  onTap: () {},
                 ),
                 _buildServiceCard(
                   icon: Icons.tv,
                   label: 'TV',
                   color: Colors.red,
+                  onTap: () {},
                 ),
               ],
             ),
           ),
-          // Transactions récentes
           Padding(
             padding: EdgeInsets.all(16),
             child: Column(
@@ -263,18 +265,40 @@ class HomeView extends StatelessWidget {
                 ),
                 SizedBox(height: 16),
                 Obx(() => homeController.recentTransactions.isEmpty
-                    ? Center(child: Text('Aucune transaction récente'))
+                    ? Center(
+                        child: Column(
+                          children: [
+                            Icon(
+                              Icons.receipt_long,
+                              size: 48,
+                              color: Colors.grey,
+                            ),
+                            SizedBox(height: 8),
+                            Text(
+                              'Aucune transaction récente',
+                              style: TextStyle(
+                                color: Colors.grey,
+                                fontSize: 16,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
                     : Column(
                         children: homeController.recentTransactions
                             .map((transactionData) => _buildTransactionItem(
-                                  icon: Icons.arrow_downward,
+                                  icon: TransactionUtils.getTransactionIcon(
+                                      transactionData['description']),
                                   title: transactionData['description'],
                                   date: transactionData['date'],
                                   amount: currencyFormat
                                       .format(transactionData['amount']),
-                                  isCredit: true,
+                                  isCredit: TransactionUtils.isCredit(
+                                      transactionData['description']),
                                   transactionId: transactionData['id'],
                                   status: transactionData['status'],
+                                  color: TransactionUtils.getTransactionColor(
+                                      transactionData['description']),
                                 ))
                             .toList(),
                       )),
@@ -324,13 +348,10 @@ class HomeView extends StatelessWidget {
     required IconData icon,
     required String label,
     required Color color,
+    required VoidCallback onTap,
   }) {
     return GestureDetector(
-      onTap: () {
-        if (label.contains('Crédit\nTéléphone')) {
-          Get.to(() => PhoneCreditView());
-        }
-      },
+      onTap: onTap,
       child: Container(
         width: 80,
         margin: EdgeInsets.only(right: 12),
@@ -378,12 +399,12 @@ class HomeView extends StatelessWidget {
   Widget _buildTransactionItem({
     required IconData icon,
     required String title,
-    required dynamic
-        date, // Changed to dynamic to accept both String and DateTime
+    required dynamic date,
     required String amount,
     required bool isCredit,
     required String transactionId,
     required String status,
+    required Color color,
   }) {
     DateTime parsedDate;
     if (date is DateTime) {
@@ -400,11 +421,10 @@ class HomeView extends StatelessWidget {
       parsedDate = DateTime.now();
     }
 
-    // Create transaction object
     final transaction = Transaction(
       id: transactionId,
-      senderId: '', // Add appropriate default or passed value
-      receiverId: '', // Add appropriate default or passed value
+      senderId: '',
+      receiverId: '',
       amount: double.tryParse(amount.replaceAll(RegExp(r'[^0-9.]'), '')) ?? 0.0,
       date: parsedDate,
       status: status,
@@ -430,14 +450,12 @@ class HomeView extends StatelessWidget {
           Container(
             padding: EdgeInsets.all(8),
             decoration: BoxDecoration(
-              color: isCredit
-                  ? Colors.green.withOpacity(0.1)
-                  : Colors.red.withOpacity(0.1),
+              color: color.withOpacity(0.1),
               shape: BoxShape.circle,
             ),
             child: Icon(
               icon,
-              color: isCredit ? Colors.green : Colors.red,
+              color: color,
             ),
           ),
           SizedBox(width: 12),
@@ -470,7 +488,7 @@ class HomeView extends StatelessWidget {
           ),
           if (status == 'completed' && transaction.isCancelable)
             IconButton(
-              icon: Icon(Icons.cancel),
+              icon: Icon(Icons.cancel, color: Colors.red.withOpacity(0.6)),
               onPressed: () => _cancelTransaction(transactionId),
             ),
         ],
