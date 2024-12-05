@@ -230,119 +230,126 @@ class TransferController extends GetxController {
     }
   }
 
-  Future<bool> cancelTransaction(String transactionId) async {
-    if (transactionId.isEmpty) {
-      errorMessage('ID de transaction invalide');
-      return false;
-    }
-
-    isLoading(true);
-    errorMessage('');
-
-    try {
-      // Récupérer la transaction
-      final transactionDoc = await _firestore
-          .collection('transactions')
-          .doc(transactionId)
-          .get();
-
-      if (!transactionDoc.exists) {
-        errorMessage('Transaction non trouvée');
-        return false;
-      }
-
-      final transactionData = transactionDoc.data()!;
-
-      // Vérifier que les IDs sont non vides
-      if (transactionData['senderId']?.isEmpty ?? true ||
-          transactionData['receiverId']?.isEmpty ?? true) {
-        errorMessage('IDs expéditeur ou destinataire manquants');
-        return false;
-      }
-
-      final transaction = Transaction.fromJson({
-        'id': transactionDoc.id,
-        ...transactionData
-      });
-
-      // Vérifier si la transaction peut être annulée
-      if (!transaction.isCancelable) {
-        errorMessage('Cette transaction ne peut plus être annulée (délai de 30 minutes dépassé)');
-        return false;
-      }
-
-      // Récupérer les documents de solde
-      final senderBalanceDoc = await _firestore
-          .collection('balances')
-          .doc(transaction.senderId)
-          .get();
-
-      final receiverBalanceDoc = await _firestore
-          .collection('balances')
-          .doc(transaction.receiverId)
-          .get();
-
-      if (!senderBalanceDoc.exists || !receiverBalanceDoc.exists) {
-        errorMessage('Impossible de récupérer les soldes des utilisateurs');
-        return false;
-      }
-
-      final senderBalance = (senderBalanceDoc.data()!['solde'] as num).toDouble();
-      final receiverBalance = (receiverBalanceDoc.data()!['solde'] as num).toDouble();
-
-      // Vérifier si le destinataire a suffisamment de fonds pour l'annulation
-      if (receiverBalance < transaction.amount) {
-        errorMessage('Le destinataire ne dispose pas de fonds suffisants pour l\'annulation');
-        return false;
-      }
-
-      // Effectuer la transaction atomique pour l'annulation
-      await _firestore.runTransaction((tx) async {
-        // Mettre à jour le solde de l'expéditeur (recréditer)
-        tx.update(senderBalanceDoc.reference, {
-          'solde': senderBalance + transaction.amount
-        });
-
-        // Mettre à jour le solde du destinataire (débiter)
-        tx.update(receiverBalanceDoc.reference, {
-          'solde': receiverBalance - transaction.amount
-        });
-
-        // Mettre à jour le statut de la transaction
-        tx.update(transactionDoc.reference, {
-          'status': 'cancelled',
-          'cancellationDate': DateTime.now().toIso8601String(),
-        });
-
-        // Créer une nouvelle transaction pour tracer l'annulation
-        final reversalTransactionRef = _firestore.collection('transactions').doc();
-        final reversalTransaction = Transaction(
-          id: reversalTransactionRef.id,
-          senderId: transaction.receiverId,
-          receiverId: transaction.senderId,
-          amount: transaction.amount,
-          date: DateTime.now(),
-          status: 'completed',
-          description: 'Annulation de la transaction ${transaction.id}',
-        ).toJson();
-
-        tx.set(reversalTransactionRef, reversalTransaction);
-      });
-
-      // Mettre à jour le HomeController
-      final homeController = Get.find<HomeController>();
-      homeController.updateUserBalance(senderBalance + transaction.amount);
-      await homeController.fetchRecentTransactions();
-
-      return true;
-    } catch (e) {
-      print('Erreur lors de l\'annulation de la transaction: $e');
-      errorMessage('Erreur lors de l\'annulation: $e');
-      return false;
-    } finally {
-      isLoading(false);
-    }
+ Future<bool> cancelTransaction(String transactionId) async {
+  if (transactionId.isEmpty) {
+    errorMessage('ID de transaction invalide');
+    return false;
   }
+
+  isLoading(true);
+  errorMessage('');
+
+  try {
+    // Récupérer la transaction
+    final transactionDoc = await _firestore
+        .collection('transactions')
+        .doc(transactionId)
+        .get();
+
+    if (!transactionDoc.exists) {
+      errorMessage('Transaction non trouvée');
+      return false;
+    }
+
+    final transactionData = transactionDoc.data()!;
+
+    // Vérifier que les IDs sont non vides
+    if (transactionData['senderId']?.isEmpty ?? true ||
+        transactionData['receiverId']?.isEmpty ?? true) {
+      errorMessage('IDs expéditeur ou destinataire manquants');
+      return false;
+    }
+
+    final transaction = Transaction.fromJson({
+      'id': transactionDoc.id,
+      ...transactionData
+    });
+
+    // Vérifier si la transaction peut être annulée
+    if (!transaction.isCancelable) {
+      errorMessage('Cette transaction ne peut plus être annulée (délai de 30 minutes dépassé)');
+      return false;
+    }
+
+    // Vérifier si la transaction est un achat de crédit
+    if (transaction.description?.toLowerCase().contains('crédit') ?? false) {
+      errorMessage('Les achats de crédits ne peuvent pas être annulés');
+      return false;
+    }
+
+    // Récupérer les documents de solde
+    final senderBalanceDoc = await _firestore
+        .collection('balances')
+        .doc(transaction.senderId)
+        .get();
+
+    final receiverBalanceDoc = await _firestore
+        .collection('balances')
+        .doc(transaction.receiverId)
+        .get();
+
+    if (!senderBalanceDoc.exists || !receiverBalanceDoc.exists) {
+      errorMessage('Impossible de récupérer les soldes des utilisateurs');
+      return false;
+    }
+
+    final senderBalance = (senderBalanceDoc.data()!['solde'] as num).toDouble();
+    final receiverBalance = (receiverBalanceDoc.data()!['solde'] as num).toDouble();
+
+    // Vérifier si le destinataire a suffisamment de fonds pour l'annulation
+    if (receiverBalance < transaction.amount) {
+      errorMessage('Le destinataire ne dispose pas de fonds suffisants pour l\'annulation');
+      return false;
+    }
+
+    // Effectuer la transaction atomique pour l'annulation
+    await _firestore.runTransaction((tx) async {
+      // Mettre à jour le solde de l'expéditeur (recréditer)
+      tx.update(senderBalanceDoc.reference, {
+        'solde': senderBalance + transaction.amount
+      });
+
+      // Mettre à jour le solde du destinataire (débiter)
+      tx.update(receiverBalanceDoc.reference, {
+        'solde': receiverBalance - transaction.amount
+      });
+
+      // Mettre à jour le statut de la transaction
+      tx.update(transactionDoc.reference, {
+        'status': 'cancelled',
+        'cancellationDate': DateTime.now().toIso8601String(),
+      });
+
+      // Créer une nouvelle transaction pour tracer l'annulation
+      final reversalTransactionRef = _firestore.collection('transactions').doc();
+      final reversalTransaction = Transaction(
+        id: reversalTransactionRef.id,
+        senderId: transaction.receiverId,
+        receiverId: transaction.senderId,
+        amount: transaction.amount,
+        date: DateTime.now(),
+        status: 'completed',
+        description: 'Annulation de la transaction ${transaction.id}',
+      ).toJson();
+
+      tx.set(reversalTransactionRef, reversalTransaction);
+    });
+
+    // Mettre à jour le HomeController
+    final homeController = Get.find<HomeController>();
+    homeController.updateUserBalance(senderBalance + transaction.amount);
+    await homeController.fetchRecentTransactions();
+
+    return true;
+  } catch (e) {
+    print('Erreur lors de l\'annulation de la transaction: $e');
+    errorMessage('Erreur lors de l\'annulation: $e');
+    return false;
+  } finally {
+    isLoading(false);
+  }
+}
+
 
   Future<bool> cancelScheduledTransfer(String transferId) async {
     isLoading(true);

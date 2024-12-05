@@ -9,6 +9,7 @@ import '../../../modules/transfer/controllers/transfer_controller.dart';
 import '../../../../models/transaction_model.dart';
 import '../../phone_credit/views/phone_credit_view.dart';
 import '../../../utilis/transaction_utils.dart';
+import '../../lectricite/views/lectricite_view.dart';
 
 class HomeView extends StatelessWidget {
   final HomeController homeController = Get.put(HomeController());
@@ -234,7 +235,7 @@ class HomeView extends StatelessWidget {
                   icon: Icons.bolt,
                   label: 'Électricité',
                   color: Colors.orange,
-                  onTap: () {},
+                  onTap: () => Get.to(() => ElectricityView()),
                 ),
                 _buildServiceCard(
                   icon: Icons.water_drop,
@@ -486,7 +487,9 @@ class HomeView extends StatelessWidget {
               fontWeight: FontWeight.w600,
             ),
           ),
-          if (status == 'completed' && transaction.isCancelable)
+          if (status == 'completed' &&
+              transaction.isCancelable &&
+              !title.toLowerCase().contains('crédit'))
             IconButton(
               icon: Icon(Icons.cancel, color: Colors.red.withOpacity(0.6)),
               onPressed: () => _cancelTransaction(transactionId),

@@ -11,11 +11,11 @@ class PhoneCreditView extends StatefulWidget {
 class _PhoneCreditViewState extends State<PhoneCreditView> {
   final PhoneCreditController controller = Get.put(PhoneCreditController());
   bool _showForm = false;
-  String _selectedOperator = '';
+  final _formKey = GlobalKey<FormState>();
 
   void _selectOperator(String operator) {
     setState(() {
-      _selectedOperator = operator;
+      controller.selectedOperator.value = operator;
       _showForm = true;
     });
   }
@@ -28,56 +28,60 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
         borderRadius: BorderRadius.vertical(top: Radius.circular(25)),
       ),
       builder: (BuildContext context) {
-        return Container(
-          height: MediaQuery.of(context).size.height * 0.8,
-          child: Column(
-            children: [
-              Padding(
-                padding: const EdgeInsets.all(16.0),
-                child: Text(
-                  'Sélectionner un contact',
-                  style: TextStyle(
-                    fontSize: 20,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.blue.shade800,
-                  ),
-                ),
+        return _buildContactPicker();
+      },
+    );
+  }
+
+  Widget _buildContactPicker() {
+    return Container(
+      height: MediaQuery.of(context).size.height * 0.8,
+      child: Column(
+        children: [
+          Padding(
+            padding: const EdgeInsets.all(16.0),
+            child: Text(
+              'Sélectionner un contact',
+              style: TextStyle(
+                fontSize: 20,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
               ),
-              Expanded(
-                child: Obx(() {
-                  return ListView.separated(
-                    separatorBuilder: (context, index) => Divider(height: 1),
-                    itemCount: controller.contacts.length,
-                    itemBuilder: (context, index) {
-                      final contact = controller.contacts[index];
-                      return ListTile(
-                        leading: CircleAvatar(
-                          backgroundColor: Colors.blue.shade100,
-                          child: Icon(Icons.person, color: Colors.blue.shade800),
-                        ),
-                        title: Text(
-                          contact.displayName,
-                          style: TextStyle(fontWeight: FontWeight.w600),
-                        ),
-                        subtitle: Text(
-                          contact.phones.isNotEmpty ? contact.phones.first.number : '',
-                          style: TextStyle(color: Colors.grey),
-                        ),
-                        onTap: () {
-                          if (contact.phones.isNotEmpty) {
-                            controller.selectContact(contact);
-                            Navigator.pop(context);
-                          }
-                        },
-                      );
+            ),
+          ),
+          Expanded(
+            child: Obx(() {
+              return ListView.separated(
+                separatorBuilder: (context, index) => Divider(height: 1),
+                itemCount: controller.contacts.length,
+                itemBuilder: (context, index) {
+                  final contact = controller.contacts[index];
+                  return ListTile(
+                    leading: CircleAvatar(
+                      backgroundColor: Colors.blue.shade100,
+                      child: Icon(Icons.person, color: Colors.blue.shade800),
+                    ),
+                    title: Text(
+                      contact.displayName,
+                      style: TextStyle(fontWeight: FontWeight.w600),
+                    ),
+                    subtitle: Text(
+                      contact.phones.isNotEmpty ? contact.phones.first.number : '',
+                      style: TextStyle(color: Colors.grey),
+                    ),
+                    onTap: () {
+                      if (contact.phones.isNotEmpty) {
+                        controller.selectContact(contact);
+                        Navigator.pop(context);
+                      }
                     },
                   );
-                }),
-              ),
-            ],
+                },
+              );
+            }),
           ),
-        );
-      },
+        ],
+      ),
     );
   }
 
@@ -173,24 +177,27 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
         ],
       ),
       padding: EdgeInsets.all(20),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Text(
-            'Achat de Crédit - $_selectedOperator',
-            style: TextStyle(
-              fontSize: 22,
-              fontWeight: FontWeight.bold,
-              color: Colors.blue.shade800,
+      child: Form(
+        key: _formKey,
+        child: Column(
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Text(
+              'Achat de Crédit - ${controller.selectedOperator.value}',
+              style: TextStyle(
+                fontSize: 22,
+                fontWeight: FontWeight.bold,
+                color: Colors.blue.shade800,
+              ),
             ),
-          ),
-          SizedBox(height: 20),
-          _buildPhoneNumberField(),
-          SizedBox(height: 16),
-          _buildAmountField(),
-          SizedBox(height: 20),
-          _buildPurchaseButton(),
-        ],
+            SizedBox(height: 20),
+            _buildPhoneNumberField(),
+            SizedBox(height: 16),
+            _buildAmountField(),
+            SizedBox(height: 20),
+            _buildPurchaseButton(),
+          ],
+        ),
       ),
     );
   }
@@ -199,7 +206,7 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
     return Row(
       children: [
         Expanded(
-          child: TextField(
+          child: TextFormField(
             controller: controller.phoneNumberController.value,
             decoration: InputDecoration(
               labelText: 'Numéro de téléphone',
@@ -207,7 +214,11 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
               border: _outlineInputBorder(),
               focusedBorder: _outlineInputBorder(isFocused: true),
             ),
-            onChanged: (value) => controller.phoneNumber.value = value,
+            validator: (value) => controller.validatePhoneNumber(value),
+            onChanged: (value) {
+              controller.phoneNumber.value = value;
+              _formKey.currentState?.validate(); // Validate in real-time
+            },
           ),
         ),
         SizedBox(width: 10),
@@ -240,7 +251,11 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
 
   Widget _buildPurchaseButton() {
     return ElevatedButton(
-      onPressed: () => controller.buyPhoneCredit(),
+      onPressed: () {
+        if (_formKey.currentState?.validate() ?? false) {
+          controller.buyPhoneCredit();
+        }
+      },
       style: ElevatedButton.styleFrom(
         minimumSize: Size(double.infinity, 48),
         backgroundColor: Colors.blue,
@@ -276,15 +291,7 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
       builder: (context, constraints) {
         return Scaffold(
           backgroundColor: Colors.grey.shade50,
-          appBar: AppBar(
-            title: Text(
-              'Crédit Téléphonique',
-              style: TextStyle(fontWeight: FontWeight.bold),
-            ),
-            backgroundColor: Colors.blue,
-            elevation: 0,
-            centerTitle: true,
-          ),
+          appBar: _buildAppBar(),
           body: SafeArea(
             child: SingleChildScrollView(
               child: Padding(
@@ -295,14 +302,7 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
                     child: Column(
                       crossAxisAlignment: CrossAxisAlignment.start,
                       children: [
-                        Text(
-                          'Choisissez votre opérateur',
-                          style: TextStyle(
-                            fontSize: constraints.maxWidth > 600 ? 32 : 28,
-                            fontWeight: FontWeight.w800,
-                            color: Colors.blue.shade800,
-                          ),
-                        ),
+                        _buildTitle(constraints),
                         SizedBox(height: 20),
                         _buildOperatorGrid(constraints),
                         SizedBox(height: 20),
@@ -316,6 +316,29 @@ class _PhoneCreditViewState extends State<PhoneCreditView> {
           ),
         );
       },
+    );
+  }
+
+  AppBar _buildAppBar() {
+    return AppBar(
+      title: Text(
+        'Crédit Téléphonique',
+        style: TextStyle(fontWeight: FontWeight.bold),
+      ),
+      backgroundColor: Colors.blue,
+      elevation: 0,
+      centerTitle: true,
+    );
+  }
+
+  Widget _buildTitle(BoxConstraints constraints) {
+    return Text(
+      'Choisissez votre opérateur',
+      style: TextStyle(
+        fontSize: constraints.maxWidth > 600 ? 32 : 28,
+        fontWeight: FontWeight.w800,
+        color: Colors.blue.shade800,
+      ),
     );
   }
 }

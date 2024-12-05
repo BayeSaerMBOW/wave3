@@ -15,6 +15,7 @@ class PhoneCreditController extends GetxController {
   var contacts = <Contact>[].obs;
   var selectedContact = Rx<Contact?>(null);
   final phoneNumberController = TextEditingController().obs;
+  var selectedOperator = ''.obs;
 
   @override
   void onInit() {
@@ -48,6 +49,26 @@ class PhoneCreditController extends GetxController {
       phoneNumber.value = contact.phones.first.number;
       phoneNumberController.value.text = contact.phones.first.number;
     }
+  }
+
+  String? validatePhoneNumber(String? phoneNumber) {
+    if (phoneNumber == null || phoneNumber.isEmpty) {
+      return 'Veuillez entrer un numéro de téléphone';
+    }
+    if (selectedOperator.value == 'Orange') {
+      if (!RegExp(r'^(77|78)\d{7}$').hasMatch(phoneNumber)) {
+        return 'Numéro de téléphone invalide pour Orange';
+      }
+    } else if (selectedOperator.value == 'Expresso') {
+      if (!RegExp(r'^70\d{7}$').hasMatch(phoneNumber)) {
+        return 'Numéro de téléphone invalide pour Expresso';
+      }
+    } else if (selectedOperator.value == 'Free') {
+      if (!RegExp(r'^76\d{7}$').hasMatch(phoneNumber)) {
+        return 'Numéro de téléphone invalide pour Free';
+      }
+    }
+    return null;
   }
 
   Future<void> buyPhoneCredit() async {
