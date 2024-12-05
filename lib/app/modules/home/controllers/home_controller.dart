@@ -47,7 +47,7 @@ class HomeController extends GetxController {
         userBalance.value = balanceDoc.exists
             ? (balanceDoc.data()?['solde'] as num?)?.toDouble() ?? 0.0
             : 0.0;
-        // Récupère les transactions récentes
+        // Récupérer les transactions récentes
         await fetchRecentTransactions();
       }
     } catch (e) {

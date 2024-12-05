@@ -1,5 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:get/get.dart';
+import '../controllers/lectricite_controller.dart';
+import 'package:intl/intl.dart';
 
 class ElectricityView extends StatefulWidget {
   const ElectricityView({Key? key}) : super(key: key);
@@ -21,6 +23,8 @@ class _ElectricityViewState extends State<ElectricityView> {
   final TextEditingController _accountNumberController = TextEditingController();
   final TextEditingController _amountController = TextEditingController();
 
+  final LectriciteController _controller = Get.put(LectriciteController());
+
   String? _selectedProvider;
   String? _selectedProviderDescription;
 
@@ -30,7 +34,7 @@ class _ElectricityViewState extends State<ElectricityView> {
       backgroundColor: backgroundColor,
       appBar: AppBar(
         title: Text(
-          'Electricity',
+          'Electricité',
           style: TextStyle(
             fontWeight: FontWeight.bold,
             color: Colors.white,
@@ -47,7 +51,7 @@ class _ElectricityViewState extends State<ElectricityView> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                _buildSectionHeader('Selectionner un Service'),
+                _buildSectionHeader('Sélectionner un Service'),
                 const SizedBox(height: 16),
                 _buildProviderGrid(),
                 const SizedBox(height: 24),
@@ -56,6 +60,27 @@ class _ElectricityViewState extends State<ElectricityView> {
                   const SizedBox(height: 16),
                   _buildPaymentForm(),
                 ],
+                const SizedBox(height: 24),
+                _buildSectionHeader('Transactions Récentes'),
+                const SizedBox(height: 16),
+                Obx(() {
+                  return _controller.recentTransactions.isEmpty
+                      ? Center(
+                          child: Text(
+                            'Aucune transaction récente',
+                            style: TextStyle(color: Colors.grey),
+                          ),
+                        )
+                      : ListView.builder(
+                          shrinkWrap: true,
+                          physics: NeverScrollableScrollPhysics(),
+                          itemCount: _controller.recentTransactions.length,
+                          itemBuilder: (context, index) {
+                            final transaction = _controller.recentTransactions[index];
+                            return _buildTransactionItem(transaction);
+                          },
+                        );
+                }),
               ],
             ),
           ),
@@ -177,13 +202,6 @@ class _ElectricityViewState extends State<ElectricityView> {
               color: secondaryColor,
             ),
           ),
-          if (_selectedProvider == 'Senelec') ...[
-            SizedBox(height: 10),
-           
-          ],
-          if (_selectedProvider == 'Woyofal') ...[
-            SizedBox(height: 10),
-          ],
         ],
       ),
     );
@@ -193,13 +211,11 @@ class _ElectricityViewState extends State<ElectricityView> {
     return Column(
       crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        _buildSectionHeader(''),
+        _buildSectionHeader('Détails de Paiement'),
         const SizedBox(height: 16),
         _buildTextField(
           _accountNumberController,
-          _selectedProvider == 'Senelec' 
-            ? 'Numero Compteur'
-            : 'Numero Compteur',
+          'Numéro de Compteur',
           Icons.numbers,
         ),
         const SizedBox(height: 16),
@@ -221,7 +237,7 @@ class _ElectricityViewState extends State<ElectricityView> {
             elevation: 3,
           ),
           child: Text(
-            'Payer ${_selectedProvider ?? ''} ',
+            'Payer ${_selectedProvider ?? ''}',
             style: TextStyle(
               fontSize: 16,
               fontWeight: FontWeight.bold,
@@ -234,8 +250,8 @@ class _ElectricityViewState extends State<ElectricityView> {
   }
 
   Widget _buildTextField(
-    TextEditingController controller, 
-    String label, 
+    TextEditingController controller,
+    String label,
     IconData icon, {
     TextInputType keyboardType = TextInputType.text,
   }) {
@@ -261,17 +277,28 @@ class _ElectricityViewState extends State<ElectricityView> {
     );
   }
 
-  void _processPayment() {
+  void _processPayment() async {
     String accountNumber = _accountNumberController.text;
     String amount = _amountController.text;
 
     if (accountNumber.isEmpty || amount.isEmpty) {
-      _showSnackBar('Please fill in all fields.');
+      _showSnackBar('Veuillez remplir tous les champs.');
       return;
     }
 
-    // Payment logic would be implemented here
-    _showPaymentConfirmation();
+    // Set the selected provider and amount in the controller
+    _controller.selectedProvider.value = _selectedProvider!;
+    _controller.accountNumber.value = accountNumber;
+    _controller.amount.value = double.parse(amount);
+
+    // Call the processPayment method from the controller
+    bool success = await _controller.processPayment();
+
+    if (success) {
+      _showPaymentConfirmation();
+    } else {
+      _showSnackBar('Échec du paiement. Veuillez réessayer.');
+    }
   }
 
   void _showSnackBar(String message) {
@@ -285,6 +312,33 @@ class _ElectricityViewState extends State<ElectricityView> {
   }
 
   void _showPaymentConfirmation() {
-    _showSnackBar('Payment for $_selectedProvider processed successfully.');
+    _showSnackBar('Paiement pour $_selectedProvider effectué avec succès.');
+  }
+
+  Widget _buildTransactionItem(Map<String, dynamic> transaction) {
+    return Card(
+      elevation: 2,
+      shape: RoundedRectangleBorder(
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: ListTile(
+        leading: Icon(
+          Icons.receipt,
+          color: accentColor,
+        ),
+        title: Text(
+          'Paiement de ${transaction['amount']} F CFA pour ${transaction['receiverId']}',
+          style: TextStyle(
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        subtitle: Text(
+          '${DateFormat('dd/MM/yyyy HH:mm').format(transaction['date'])}',
+          style: TextStyle(
+            color: Colors.grey,
+          ),
+        ),
+      ),
+    );
   }
 }
